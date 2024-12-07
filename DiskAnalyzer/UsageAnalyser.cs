@@ -17,17 +17,17 @@
             {
                 string folder = tree.Root.Name;
 
-                List<string> files = [];
+                List<string>? files = ignoreHardLinks ? [] : null;
                 IndexFilesAsync(tree, folder, files, cancellationToken);
                 if (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
                 tree.Root.SortAZ();
-                files.Sort();
 
                 if (ignoreHardLinks)
                 {
+                    files!.Sort();
                     HardLinkHelper.UpdateTree(tree, files, cancellationToken);
                 }
 
@@ -40,10 +40,7 @@
             }, cancellationToken);
         }
 
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        private static extern FileAttributes GetFileAttributes(string lpFileName);
-
-        private static void IndexFilesAsync(FileTree tree, string folder, List<string> files, CancellationToken cancellationToken)
+        private static void IndexFilesAsync(FileTree tree, string folder, List<string>? files, CancellationToken cancellationToken)
         {
             ConcurrentQueue<(string folder, FileMetadata meta, FileTreeNode parent)> folderQueue = new();
 
@@ -53,14 +50,14 @@
             }
 
             long start = Stopwatch.GetTimestamp();
-            ConcurrentBag<string> filesBag = new();
+            ConcurrentBag<string>? filesBag = files != null ? new() : null;
             Barrier barrier = new(Environment.ProcessorCount);
 
             Thread[] threads = new Thread[Environment.ProcessorCount];
             for (int i = 0; i < threads.Length; i++)
             {
                 threads[i] = new(WorkerVoid);
-                threads[i].Start((folderQueue, filesBag, tree, barrier, cancellationToken));
+                threads[i].Start(new TaskParams(folderQueue, filesBag, tree, barrier, cancellationToken));
             }
 
             for (int i = 0; i < threads.Length; i++)
@@ -74,15 +71,44 @@
 
             ImGuiDebugTools.WriteLine(duartion);
 
-            files.AddRange(filesBag);
+            files?.AddRange(filesBag!);
+        }
+
+        private struct TaskParams
+        {
+            public ConcurrentQueue<(string folder, FileMetadata meta, FileTreeNode parent)> folderQueue;
+            public ConcurrentBag<string>? files;
+            public FileTree tree;
+            public Barrier barrier;
+            public CancellationToken cancellationToken;
+
+            public TaskParams(ConcurrentQueue<(string folder, FileMetadata meta, FileTreeNode parent)> folderQueue, ConcurrentBag<string>? files, FileTree tree, Barrier barrier, CancellationToken cancellationToken)
+            {
+                this.folderQueue = folderQueue;
+                this.files = files;
+                this.tree = tree;
+                this.barrier = barrier;
+                this.cancellationToken = cancellationToken;
+            }
+
+            public readonly void Deconstruct(out ConcurrentQueue<(string folder, FileMetadata meta, FileTreeNode parent)> folderQueue, out ConcurrentBag<string>? files, out FileTree tree, out Barrier barrier, out CancellationToken cancellationToken)
+            {
+                folderQueue = this.folderQueue;
+                files = this.files;
+                tree = this.tree;
+                barrier = this.barrier;
+                cancellationToken = this.cancellationToken;
+            }
         }
 
         private static void WorkerVoid(object? param)
         {
-            if (param is not (ConcurrentQueue<(string folder, FileMetadata meta, FileTreeNode parent)> folderQueue, ConcurrentBag<string> files, FileTree tree, Barrier barrier, CancellationToken cancellationToken))
+            if (param is not TaskParams taskParams)
             {
                 return;
             }
+
+            (ConcurrentQueue<(string folder, FileMetadata meta, FileTreeNode parent)> folderQueue, ConcurrentBag<string>? files, FileTree tree, Barrier barrier, CancellationToken cancellationToken) = taskParams;
 
             Queue<(string folder, FileMetadata meta, FileTreeNode parent)> localQueue = new();
             const int localThreshold = 16;
@@ -110,7 +136,7 @@
                     try
                     {
                         long folderSize = 0;
-                        foreach (var metadata in FileUtils.EnumerateEntries(item.folder, "", SearchOption.TopDirectoryOnly))
+                        foreach (var metadata in FileUtils.EnumerateEntries(item.folder, "", SearchOption.TopDirectoryOnly)) // Uses native calls instead of c# ones which create file handles and gc pressure.
                         {
                             if (cancellationToken.IsCancellationRequested)
                             {
@@ -133,7 +159,7 @@
                             }
                             else
                             {
-                                files.Add(path);
+                                files?.Add(path);
                                 var fileNode = FileTree.AddFileToFolder(folderNode, path, metadata, automaticSizeCalc: false);
                                 filesCount++;
                                 folderSize += fileNode.Size;
