@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DiskAnalyzer": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
