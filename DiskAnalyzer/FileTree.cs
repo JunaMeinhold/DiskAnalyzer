@@ -1,6 +1,6 @@
 ﻿namespace DiskAnalyzer
 {
-    using Hexa.NET.ImGui.Widgets.IO;
+    using Hexa.NET.Utilities.IO;
     using System;
     using System.Collections.Generic;
 

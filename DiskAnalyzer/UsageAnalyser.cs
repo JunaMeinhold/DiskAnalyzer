@@ -1,11 +1,10 @@
 ﻿namespace DiskAnalyzer
 {
-    using Hexa.NET.ImGui.Widgets.IO;
     using Hexa.NET.KittyUI.Debugging;
+    using Hexa.NET.Utilities.IO;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Runtime.InteropServices;
     using System.Threading;
     using System.Threading.Tasks;
 

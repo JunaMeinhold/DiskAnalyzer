@@ -10,8 +10,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Hexa.NET.ImGui.Widgets" Version="1.1.20" />
-		<PackageReference Include="Hexa.NET.KittyUI" Version="1.0.9" />
+		<PackageReference Include="Hexa.NET.KittyUI" Version="1.1.0" />
 	</ItemGroup>
 
 </Project>

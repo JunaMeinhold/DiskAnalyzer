@@ -3,8 +3,8 @@
     using Hexa.NET.ImGui;
     using Hexa.NET.ImGui.Widgets;
     using Hexa.NET.ImGui.Widgets.Dialogs;
-    using Hexa.NET.ImGui.Widgets.Text;
     using Hexa.NET.ImPlot;
+    using Hexa.NET.Utilities.Text;
     using System.Diagnostics;
     using System.Numerics;
     using System.Threading.Tasks;
@@ -98,7 +98,7 @@
             if (TaskManager.IsAnyRunning)
             {
                 ImGui.SameLine();
-                ImGuiSpinner.Spinner("##D", 6, 3, 0xffefcd32);
+                ImGuiSpinner.Spinner(6, 3, 0xffefcd32);
             }
 
             if (tree != null)
@@ -117,10 +117,7 @@
                 TimeSpan duration = TimeSpan.FromSeconds((end - analysisStart) / (double)Stopwatch.Frequency);
 
                 sb.Append(", Elapsed: "u8);
-                sb.Append(duration.Minutes);
-                sb.Append("min "u8);
-                sb.Append(duration.Seconds);
-                sb.Append("s "u8);
+                sb.Append(duration, "m'min' s's'");
                 sb.End();
                 ImGui.Text(sb);
             }
